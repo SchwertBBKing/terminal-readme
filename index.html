@@ -3,148 +3,312 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Terminal Portfolio</title>
+  <title>Interaktives Terminal Portfolio</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap');
+
     body {
-      margin: 0;
-      padding: 2em;
-      background: #0d0d0d;
-      color: #00ff00;
-      font-family: 'Courier New', monospace;
-      overflow-x: hidden;
+      margin: 0; padding: 1.5rem;
+      background: #0b0c10;
+      font-family: 'Fira Mono', monospace;
+      color: #c5c8c6;
+      display: flex;
+      justify-content: center;
     }
+
     .terminal {
-      max-width: 800px;
-      margin: auto;
-      background: #111;
-      padding: 2em;
-      border-radius: 12px;
-      box-shadow: 0 0 20px #0f0;
+      background: #1c1f26;
+      border-radius: 6px;
+      width: 720px;
+      max-width: 100%;
+      box-shadow:
+        0 0 12px #2ecc40aa,
+        inset 0 0 40px #2ecc40aa;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      height: 450px;
       position: relative;
+      animation: glowPulse 3s ease-in-out infinite;
     }
-    .line {
+
+    @keyframes glowPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 8px #2ecc40bb,
+          inset 0 0 30px #2ecc40bb;
+      }
+      50% {
+        box-shadow:
+          0 0 20px #2ecc40ee,
+          inset 0 0 60px #2ecc40ee;
+      }
+    }
+
+    .header {
+      color: #2ecc40;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      user-select: none;
+    }
+
+    .output {
+      flex-grow: 1;
+      overflow-y: auto;
       white-space: pre-wrap;
-      line-height: 1.6;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+      font-size: 14px;
     }
-    .prompt::before {
-      content: "➜ ";
-      color: #00ff00;
+
+    .input-line {
+      display: flex;
+      align-items: center;
     }
+
+    .prompt {
+      color: #2ecc40;
+      font-weight: 700;
+      margin-right: 0.6rem;
+      user-select: none;
+    }
+
     input {
       background: transparent;
       border: none;
-      color: #00ff00;
-      font: inherit;
       outline: none;
+      color: #c5c8c6;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      caret-color: #2ecc40;
+      user-select: text;
       width: 100%;
     }
-    .output a {
-      color: #00bfff;
+
+    a {
+      color: #1abc9c;
       text-decoration: underline;
-      cursor: pointer;
     }
+    a:hover {
+      color: #16a085;
+    }
+
+    .command {
+      color: #f1c40f;
+      font-weight: 700;
+      margin-top: 0.3rem;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-weight: 700;
+      margin-top: 0.3rem;
+    }
+
+    .response {
+      margin-left: 1.4rem;
+      color: #c5c8c6;
+    }
+
     .blinking-cursor {
-      display: inline-block;
       width: 10px;
-      height: 1em;
-      background: #00ff00;
+      height: 18px;
+      background: #2ecc40;
       margin-left: 5px;
-      animation: blink 1s step-start infinite;
+      animation: blink 1s steps(2, start) infinite;
     }
+
     @keyframes blink {
-      50% { opacity: 0; }
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
     }
   </style>
 </head>
 <body>
 
-  <div class="terminal" id="terminal">
-    <div class="line">Willkommen bei <span class="command">yourname@portfolio</span></div>
-    <div class="line">Gib <span class="command">help</span> ein, um zu starten.</div>
-    <div class="line prompt">
-      <input type="text" id="commandInput" autofocus aria-label="Terminaleingabe" />
-      <span class="blinking-cursor"></span>
-    </div>
+<div class="terminal" role="region" aria-label="Interaktives Terminal Portfolio">
+  <div class="header">root@user:~$</div>
+  <div class="output" id="output" aria-live="polite" aria-atomic="false"></div>
+  <div class="input-line">
+    <span class="prompt">root@user:~$</span>
+    <input id="input" type="text" spellcheck="false" autocomplete="off" aria-label="Terminal Eingabe" autofocus />
+    <span class="blinking-cursor"></span>
   </div>
+</div>
 
-  <script>
-    const terminal = document.getElementById("terminal");
-    const input = document.getElementById("commandInput");
+<script>
+  const output = document.getElementById('output');
+  const input = document.getElementById('input');
 
-    const commands = {
-      help: [
-        "Verfügbare Befehle:",
-        "- about",
-        "- projects",
-        "- contact",
-        "- clear"
-      ],
-      about: [
-        "👋 Hi, ich bin [DEIN NAME]",
-        "Fullstack Entwickler mit Fokus auf Design, UX und Open Source."
-      ],
-      projects: [
-        "📦 mydashboard – Admin Template:",
-        "   → https://github.com/deinname/mydashboard",
-        "🧩 devtools-hub – Snippet Manager:",
-        "   → https://github.com/deinname/devtools-hub"
-      ],
-      contact: [
-        "📫 E-Mail: mailto:you@example.com",
-        "🔗 LinkedIn: https://linkedin.com/in/deinname"
-      ]
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playBeep() {
+    if (!audioCtx) return;
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.02);
+  }
+
+  const commands = {
+    help: [
+      "Available commands:",
+      "about      - About me",
+      "projects   - My Projects",
+      "contact    - Contact me",
+      "clear      - Clear terminal"
+    ],
+    about: [
+      "Hi I'm SchwertBBKing,",
+      "I am a developer focusing on web and app development."
+    ],
+    projects: [
+      "Projects:",
+      "- Github-Readme: Description: (https://schwertbbking.github.io/terminal-readme/)",
+      "- Project: Description: (Soon available)"
+    ],
+    contact: [
+      "Contact:",
+      "Discord: https://discord.com/channels/@me/884064270202068992",
+      "GitHub: https://github.com/schwertbbking"
+    ],
+    matrix: [
+      "Starting Matrix ..."
+    ],
+    tips: [
+      "Tipp: Write 'help', for all commands.",
+      "Try 'about' or 'projects'!",
+      "The terminal responds immediately to your input.",
+      "Commands are not case-sensitive.",
+      "Have fun trying it out!"
+    ]
+  };
+
+  let lastTipIndex = -1;
+
+  async function printLines(lines, className = 'response') {
+    for (const line of lines) {
+      const div = document.createElement('div');
+      div.className = className;
+      output.appendChild(div);
+      for (let i = 0; i < line.length; i++) {
+        div.textContent += line[i];
+        playBeep();
+        await new Promise(r => setTimeout(r, 15));
+      }
+      div.innerHTML = div.innerHTML.replace(/(https?:\/\/[^\s]+)/g, url =>
+        `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+      );
+      output.scrollTop = output.scrollHeight;
+    }
+  }
+
+  input.addEventListener('keydown', async e => {
+    if (e.key === 'Enter') {
+      const cmdRaw = input.value.trim();
+      if (!cmdRaw) return;
+      const cmd = cmdRaw.toLowerCase();
+
+      const cmdLine = document.createElement('div');
+      cmdLine.className = 'command';
+      cmdLine.textContent = `root@user:~$ ${cmdRaw}`;
+      output.appendChild(cmdLine);
+
+      if (cmd === 'clear') {
+        output.innerHTML = '';
+      } else if (cmd === 'matrix') {
+        await printLines(commands.matrix);
+        startMatrixMode();
+      } else if (commands[cmd]) {
+        await printLines(commands[cmd]);
+      } else {
+        await printLines([`Command not found: ${cmdRaw}`], 'error');
+      }
+
+      input.value = '';
+      output.scrollTop = output.scrollHeight;
+      resetIdleTimer();
+    }
+  });
+
+  let idleTimeout;
+  function showRandomTip() {
+    let tipIndex;
+    do {
+      tipIndex = Math.floor(Math.random() * commands.tips.length);
+    } while (tipIndex === lastTipIndex);
+    lastTipIndex = tipIndex;
+
+    const tip = commands.tips[tipIndex];
+    const tipDiv = document.createElement('div');
+    tipDiv.className = 'response';
+    tipDiv.textContent = tip;
+    output.appendChild(tipDiv);
+    output.scrollTop = output.scrollHeight;
+  }
+
+  function resetIdleTimer() {
+    clearTimeout(idleTimeout);
+    idleTimeout = setTimeout(() => {
+      showRandomTip();
+      resetIdleTimer();
+    }, 8000);
+  }
+  resetIdleTimer();
+
+  // 🎉 EASTER EGG – MATRIX ANIMATION
+  function startMatrixMode() {
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.top = 0;
+    canvas.style.left = 0;
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.zIndex = 9999;
+    canvas.style.pointerEvents = 'none';
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const letters = 'アカサタナハマヤラワ0123456789ABCDEF'.split('');
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0f0';
+      ctx.font = fontSize + 'px monospace';
+      for (let i = 0; i < drops.length; i++) {
+        const text = letters[Math.floor(Math.random() * letters.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
     };
 
-    function printLines(lines) {
-      lines.forEach((line, i) => {
-        setTimeout(() => {
-          const el = document.createElement("div");
-          el.className = "line output";
+    const interval = setInterval(draw, 40);
 
-          const linkified = line.replace(/(https?:\/\/\S+)/g, (match) => {
-            return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-          });
+    setTimeout(() => {
+      clearInterval(interval);
+      canvas.remove();
+    }, 10000); // 10 Sek
+  }
 
-          el.innerHTML = linkified;
-          terminal.insertBefore(el, input.parentElement);
-          terminal.scrollTop = terminal.scrollHeight;
-        }, i * 100);
-      });
-    }
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const cmd = input.value.trim();
-        if (cmd === "") return;
-
-        const cmdLine = document.createElement("div");
-        cmdLine.className = "line prompt";
-        cmdLine.textContent = "➜ " + cmd;
-        terminal.insertBefore(cmdLine, input.parentElement);
-
-        if (cmd === "clear") {
-          terminal.innerHTML = "";
-          const inputContainer = document.createElement("div");
-          inputContainer.className = "line prompt";
-          inputContainer.innerHTML = `
-            <input type="text" id="commandInput" autofocus aria-label="Terminaleingabe" />
-            <span class="blinking-cursor"></span>
-          `;
-          terminal.appendChild(inputContainer);
-          inputContainer.querySelector("input").focus();
-          return;
-        }
-
-        if (commands[cmd]) {
-          printLines(commands[cmd]);
-        } else {
-          printLines(["Befehl nicht gefunden: " + cmd]);
-        }
-
-        input.value = "";
-      }
-    });
-  </script>
+  // Start with help
+  printLines(commands.help);
+</script>
 
 </body>
 </html>
