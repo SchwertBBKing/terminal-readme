@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terminal Portfolio</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 2em;
+      background: #0d0d0d;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      overflow-x: hidden;
+    }
+    .terminal {
+      max-width: 800px;
+      margin: auto;
+      background: #111;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #0f0;
+      position: relative;
+    }
+    .line {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .prompt::before {
+      content: "➜ ";
+      color: #00ff00;
+    }
+    input {
+      background: transparent;
+      border: none;
+      color: #00ff00;
+      font: inherit;
+      outline: none;
+      width: 100%;
+    }
+    .output a {
+      color: #00bfff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .blinking-cursor {
+      display: inline-block;
+      width: 10px;
+      height: 1em;
+      background: #00ff00;
+      margin-left: 5px;
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="terminal" id="terminal">
+    <div class="line">Willkommen bei <span class="command">yourname@portfolio</span></div>
+    <div class="line">Gib <span class="command">help</span> ein, um zu starten.</div>
+    <div class="line prompt">
+      <input type="text" id="commandInput" autofocus aria-label="Terminaleingabe" />
+      <span class="blinking-cursor"></span>
+    </div>
+  </div>
+
+  <script>
+    const terminal = document.getElementById("terminal");
+    const input = document.getElementById("commandInput");
+
+    const commands = {
+      help: [
+        "Verfügbare Befehle:",
+        "- about",
+        "- projects",
+        "- contact",
+        "- clear"
+      ],
+      about: [
+        "👋 Hi, ich bin [DEIN NAME]",
+        "Fullstack Entwickler mit Fokus auf Design, UX und Open Source."
+      ],
+      projects: [
+        "📦 mydashboard – Admin Template:",
+        "   → https://github.com/deinname/mydashboard",
+        "🧩 devtools-hub – Snippet Manager:",
+        "   → https://github.com/deinname/devtools-hub"
+      ],
+      contact: [
+        "📫 E-Mail: mailto:you@example.com",
+        "🔗 LinkedIn: https://linkedin.com/in/deinname"
+      ]
+    };
+
+    function printLines(lines) {
+      lines.forEach((line, i) => {
+        setTimeout(() => {
+          const el = document.createElement("div");
+          el.className = "line output";
+
+          const linkified = line.replace(/(https?:\/\/\S+)/g, (match) => {
+            return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+          });
+
+          el.innerHTML = linkified;
+          terminal.insertBefore(el, input.parentElement);
+          terminal.scrollTop = terminal.scrollHeight;
+        }, i * 100);
+      });
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const cmd = input.value.trim();
+        if (cmd === "") return;
+
+        const cmdLine = document.createElement("div");
+        cmdLine.className = "line prompt";
+        cmdLine.textContent = "➜ " + cmd;
+        terminal.insertBefore(cmdLine, input.parentElement);
+
+        if (cmd === "clear") {
+          terminal.innerHTML = "";
+          const inputContainer = document.createElement("div");
+          inputContainer.className = "line prompt";
+          inputContainer.innerHTML = `
+            <input type="text" id="commandInput" autofocus aria-label="Terminaleingabe" />
+            <span class="blinking-cursor"></span>
+          `;
+          terminal.appendChild(inputContainer);
+          inputContainer.querySelector("input").focus();
+          return;
+        }
+
+        if (commands[cmd]) {
+          printLines(commands[cmd]);
+        } else {
+          printLines(["Befehl nicht gefunden: " + cmd]);
+        }
+
+        input.value = "";
+      }
+    });
+  </script>
+
+</body>
+</html>
